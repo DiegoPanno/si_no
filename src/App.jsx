@@ -8,17 +8,17 @@ export default function App() {
   // Estados
   const [faceDetected, setFaceDetected] = useState(false);
   const [currentRatio, setCurrentRatio] = useState(0.40);
-  const [neutralPoint, setNeutralPoint] = useState(null); // null = Pantalla de calibración
+  const [neutralPoint, setNeutralPoint] = useState(null); // null = Modo Calibración
   const [activeZone, setActiveZone] = useState(null);     // 'UP' | 'DOWN' | null
   const [progress, setProgress] = useState(0);
   
-  // Panel de control para el cuidador (oculto por defecto)
+  // Menú discreto para el cuidador
   const [showCaregiverMenu, setShowCaregiverMenu] = useState(false);
 
   // Calibración inicial
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [calibProgress, setCalibProgress] = useState(0);
-  const [statusMsg, setStatusMsg] = useState('Esperando cámara y rostro...');
+  const [statusMsg, setStatusMsg] = useState('Buscando cámara y rostro...');
 
   // Sensibilidad
   const [sensitivity, setSensitivity] = useState(0.035); 
@@ -32,7 +32,7 @@ export default function App() {
   const historyRef = useRef([]);
   const isRunningRef = useRef(false);
 
-  // Síntesis de voz accesible
+  // Síntesis de voz accesible en español
   const speak = useCallback((text) => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -118,7 +118,7 @@ export default function App() {
     setProgress(0);
   };
 
-  // Inicialización de cámara compatible con iOS Safari y MediaPipe
+  // Inicialización de cámara compatible con iOS Safari y PC
   useEffect(() => {
     const FaceMeshClass = window.FaceMesh;
     if (!FaceMeshClass) return;
@@ -245,7 +245,7 @@ export default function App() {
           const finalVal = parseFloat(avg.toFixed(3));
           neutralPointRef.current = finalVal;
           setNeutralPoint(finalVal);
-          setShowCaregiverMenu(false); // Cierra cualquier menú técnico
+          setShowCaregiverMenu(false);
         } else {
           alert('No se detectaron los ojos con claridad. Intenta de nuevo.');
         }
@@ -265,7 +265,7 @@ export default function App() {
       />
 
       {/* ========================================================
-          FASE 1: PANTALLA DE CALIBRACIÓN INICIAL
+          FASE 1: PANTALLA DE CALIBRACIÓN
           ======================================================== */}
       {neutralPoint === null ? (
         <div className="calibration-screen">
@@ -296,7 +296,6 @@ export default function App() {
             )}
           </div>
 
-          {/* El video y datos solo se muestran aquí para que el cuidador verifique */}
           <div className="calib-footer">
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div className="preview-wrapper">
@@ -304,7 +303,7 @@ export default function App() {
               </div>
               <div className="status-badge">
                 <span className={`status-led ${faceDetected ? 'ready' : ''}`} />
-                <span style={{ fontSize: '0.9rem' }}>{statusMsg}</span>
+                <span style={{ fontSize: '0.88rem' }}>{statusMsg}</span>
               </div>
             </div>
 
@@ -315,12 +314,12 @@ export default function App() {
             >
               {isCalibrating ? (
                 <>
-                  <RotateCcw size={20} className="spin" />
+                  <RotateCcw size={18} className="spin" />
                   Calibrando...
                 </>
               ) : (
                 <>
-                  <Play size={20} fill="white" />
+                  <Play size={18} fill="white" />
                   Comenzar Calibración
                 </>
               )}
@@ -329,7 +328,7 @@ export default function App() {
         </div>
       ) : (
         /* ========================================================
-           FASE 2: MODO COMUNICACIÓN PURA (100% LIMPIO PARA EL PACIENTE)
+           FASE 2: MODO CLÍNICO DE BAJO ESTÍMULO (SÍ / NO)
            ======================================================== */
         <>
           {/* Zona Superior: SÍ */}
@@ -338,7 +337,7 @@ export default function App() {
             onClick={() => speak('Sí')}
           >
             <div className="zone-content">
-              <ChevronUp className="zone-icon" strokeWidth={3.5} />
+              <ChevronUp className="zone-icon" strokeWidth={3} />
               <span className="zone-title">SÍ</span>
               <span className="zone-sub">Mirar Arriba</span>
             </div>
@@ -350,37 +349,23 @@ export default function App() {
             </div>
           </div>
 
-          {/* FRANJA CENTRAL MINIMALISTA (ZONA DE DESCANSO VACÍA) */}
-          <div 
-            className="dock" 
-            style={{ 
-              height: '48px', 
-              padding: '0 16px',
-              backgroundColor: '#0d1117',
-              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
-            }}
-          >
-            {/* Pequeño punto LED de estado en la esquina (apenas visible) */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span 
-                className={`status-led ${faceDetected ? 'ready' : ''}`} 
-                style={{ width: '8px', height: '8px' }}
-                title={faceDetected ? 'Rostro conectado' : 'Sin rostro'}
-              />
-            </div>
+          {/* FRANJA CENTRAL VACÍA Y OSCURA (DESCANSO TOTAL) */}
+          <div className="dock-clean">
+            {/* Indicador LED ultra-discreto en la esquina */}
+            <span 
+              className={`status-led ${faceDetected ? 'ready' : ''}`} 
+              title={faceDetected ? 'Rostro conectado' : 'Sin rostro'}
+            />
 
-            {/* CENTRO VACÍO: Descanso visual absoluto */}
             <div style={{ flex: 1 }} />
 
-            {/* Botón discreto de Ajustes para el Cuidador */}
+            {/* Botón de ajustes solo para el cuidador */}
             <button 
               className="btn-action" 
-              style={{ padding: '6px 12px', fontSize: '0.8rem', background: 'transparent', border: 'none', opacity: 0.6 }}
               onClick={() => setShowCaregiverMenu(!showCaregiverMenu)}
-              title="Ajustes de cuidador"
+              title="Ajustes de acompañante"
             >
-              <Settings2 size={18} />
+              <Settings2 size={16} />
             </button>
           </div>
 
@@ -398,11 +383,11 @@ export default function App() {
             <div className="zone-content">
               <span className="zone-title">NO</span>
               <span className="zone-sub">Mirar Abajo</span>
-              <ChevronDown className="zone-icon" strokeWidth={3.5} />
+              <ChevronDown className="zone-icon" strokeWidth={3} />
             </div>
           </div>
 
-          {/* MENÚ FLOTANTE OPCIONAL DEL CUIDADOR (solo aparece al tocar la ruedita) */}
+          {/* Menú modal opcional para el cuidador */}
           {showCaregiverMenu && (
             <div style={{
               position: 'fixed',
@@ -414,14 +399,14 @@ export default function App() {
               padding: '20px',
               borderRadius: '12px',
               zIndex: 100,
-              boxShadow: '0 8px 30px rgba(0,0,0,0.8)',
+              boxShadow: '0 10px 40px rgba(0,0,0,0.85)',
               display: 'flex',
               flexDirection: 'column',
-              gap: '16px',
-              minWidth: '280px'
+              gap: '14px',
+              minWidth: '270px'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 700 }}>Ajustes de Asistencia</span>
+                <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>Ajustes de Asistencia</span>
                 <button 
                   onClick={() => setShowCaregiverMenu(false)}
                   style={{ background: 'none', border: 'none', color: '#8b949e', cursor: 'pointer' }}
@@ -430,7 +415,7 @@ export default function App() {
                 </button>
               </div>
 
-              <div style={{ fontSize: '0.85rem', color: '#8b949e' }}>
+              <div style={{ fontSize: '0.82rem', color: '#8b949e' }}>
                 Posición: <b>{currentRatio}</b> | Base: <b>{neutralPoint}</b>
               </div>
 
@@ -447,15 +432,27 @@ export default function App() {
               </div>
 
               <button 
-                className="btn-action" 
-                style={{ width: '100%', justifyContent: 'center', background: '#238636', color: '#fff', border: 'none', padding: '10px' }}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  background: '#238636',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '10px',
+                  borderRadius: '6px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
                 onClick={() => {
                   neutralPointRef.current = null;
-                  setNeutralPoint(null); // Regresa a calibración inicial
+                  setNeutralPoint(null);
                 }}
               >
                 <RotateCcw size={16} />
-                Volver a Calibrar Mirada
+                Volver a Calibrar
               </button>
             </div>
           )}

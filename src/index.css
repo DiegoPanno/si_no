@@ -14,8 +14,8 @@ body, html, #root {
   padding: 0;
   overflow: hidden;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background-color: #0b0f17;
-  color: #ffffff;
+  background-color: #090c10;
+  color: #c9d1d9;
 }
 
 .app-container {
@@ -24,10 +24,11 @@ body, html, #root {
   width: 100vw;
   height: 100vh;
   height: 100dvh;
+  background-color: #090c10;
 }
 
 /* ========================================================
-   FASE 1: PANTALLA EXCLUSIVA DE CALIBRACIÓN (CENTRO LIMPIO)
+   FASE 1: PANTALLA DE CALIBRACIÓN (FONDO NEUTRO Y LIMPIO)
    ======================================================== */
 .calibration-screen {
   width: 100vw;
@@ -38,85 +39,80 @@ body, html, #root {
   justify-content: space-between;
   align-items: center;
   padding: 24px;
-  background: radial-gradient(circle at center, #161b22 0%, #090d16 100%);
+  background: #090c10;
   position: relative;
 }
 
 .calib-header {
   text-align: center;
-  max-width: 500px;
+  max-width: 480px;
 }
 
 .calib-title {
-  font-size: clamp(1.4rem, 4vw, 2.2rem);
-  font-weight: 800;
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  font-weight: 700;
   color: #f0f6fc;
   margin-bottom: 6px;
 }
 
 .calib-subtitle {
-  font-size: clamp(0.9rem, 2.5vw, 1.15rem);
+  font-size: clamp(0.9rem, 2.5vw, 1.1rem);
   color: #8b949e;
 }
 
-/* Diana central gigante para fijar la mirada */
 .calib-center-target {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  position: relative;
 }
 
 .target-outer-ring {
-  width: clamp(160px, 35vmin, 240px);
-  height: clamp(160px, 35vmin, 240px);
+  width: clamp(150px, 32vmin, 220px);
+  height: clamp(150px, 32vmin, 220px);
   border-radius: 50%;
-  border: 4px dashed #38bdf8;
+  border: 3px dashed #38bdf8;
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: pulse-ring 2.5s infinite ease-in-out;
-  background: rgba(56, 189, 248, 0.05);
-  position: relative;
+  animation: calm-pulse 3s infinite ease-in-out;
+  background: rgba(56, 189, 248, 0.04);
 }
 
 .target-inner-circle {
-  width: clamp(60px, 14vmin, 90px);
-  height: clamp(60px, 14vmin, 90px);
+  width: clamp(50px, 12vmin, 76px);
+  height: clamp(50px, 12vmin, 76px);
   border-radius: 50%;
   background: #0284c7;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 30px rgba(56, 189, 248, 0.5);
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.4);
 }
 
 .target-center-dot {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: #ffffff;
-  box-shadow: 0 0 12px #ffffff;
 }
 
 .target-text {
-  margin-top: 18px;
-  font-size: clamp(1.1rem, 3vw, 1.4rem);
-  font-weight: 700;
+  margin-top: 16px;
+  font-size: clamp(1rem, 2.8vw, 1.25rem);
+  font-weight: 600;
   color: #38bdf8;
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
 }
 
-/* Barra de progreso de la calibración */
 .calib-progress-track {
-  width: clamp(200px, 45vmin, 320px);
-  height: 12px;
-  background: #21262d;
-  border-radius: 6px;
+  width: clamp(180px, 40vmin, 280px);
+  height: 10px;
+  background: #161b22;
+  border-radius: 5px;
   overflow: hidden;
-  margin-top: 16px;
+  margin-top: 14px;
   border: 1px solid #30363d;
 }
 
@@ -126,37 +122,32 @@ body, html, #root {
   transition: width 0.08s linear;
 }
 
-/* Footer con controles para el cuidador */
 .calib-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  max-width: 700px;
+  max-width: 650px;
   background: #161b22;
   border: 1px solid #30363d;
-  padding: 12px 20px;
-  border-radius: 14px;
-  gap: 16px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  gap: 14px;
 }
 
 .btn-start-calib {
   background: #2563eb;
   color: white;
   border: none;
-  padding: 14px 28px;
-  font-size: 1.1rem;
-  border-radius: 10px;
+  padding: 12px 24px;
+  font-size: 1rem;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 8px;
   transition: background 0.2s;
-}
-
-.btn-start-calib:hover {
-  background: #1d4ed8;
 }
 
 .btn-start-calib:disabled {
@@ -164,14 +155,14 @@ body, html, #root {
   cursor: not-allowed;
 }
 
-@keyframes pulse-ring {
-  0% { transform: scale(0.96); opacity: 0.7; }
-  50% { transform: scale(1.04); opacity: 1; box-shadow: 0 0 40px rgba(56, 189, 248, 0.25); }
-  100% { transform: scale(0.96); opacity: 0.7; }
+@keyframes calm-pulse {
+  0% { transform: scale(0.97); opacity: 0.7; }
+  50% { transform: scale(1.03); opacity: 1; }
+  100% { transform: scale(0.97); opacity: 0.7; }
 }
 
 /* ========================================================
-   FASE 2: MODO COMUNICADOR ACTIVO (SÍ / NO)
+   FASE 2: MODO CLÍNICO DE BAJO ESTÍMULO (SÍ / NO)
    ======================================================== */
 .zone {
   flex: 1;
@@ -181,66 +172,90 @@ body, html, #root {
   align-items: center;
   justify-content: center;
   position: relative;
-  transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   padding: 10px;
+  /* Fondo sobrio en estado de descanso */
+  background-color: #0f141c;
+  transition: background-color 0.25s ease, color 0.2s ease;
 }
 
 .zone-yes {
-  background: linear-gradient(180deg, #064e3b 0%, #065f46 100%);
-  border-bottom: 2px solid rgba(255, 255, 255, 0.12);
-}
-
-.zone-yes.active {
-  background: linear-gradient(180deg, #059669 0%, #10b981 100%);
-  box-shadow: inset 0 0 60px rgba(255, 255, 255, 0.35);
+  border-bottom: 1px solid #1f2937;
 }
 
 .zone-no {
-  background: linear-gradient(180deg, #7f1d1d 0%, #991b1b 100%);
-  border-top: 2px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid #1f2937;
 }
 
-.zone-no.active {
-  background: linear-gradient(180deg, #dc2626 0%, #ef4444 100%);
-  box-shadow: inset 0 0 60px rgba(255, 255, 255, 0.35);
-}
-
+/* En reposo: letras tenues que no distraen */
 .zone-content {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
   z-index: 2;
+  opacity: 0.45; /* Atenuado en reposo */
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .zone-title {
-  font-size: clamp(3.2rem, 12vh, 7rem);
-  font-weight: 900;
+  font-size: clamp(3.2rem, 12vh, 6.5rem);
+  font-weight: 800;
   letter-spacing: 3px;
   line-height: 1;
-  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  color: #e6edf3;
 }
 
 .zone-sub {
-  font-size: clamp(0.9rem, 2.5vh, 1.3rem);
-  opacity: 0.85;
+  font-size: clamp(0.85rem, 2.2vh, 1.15rem);
+  color: #8b949e;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
 .zone-icon {
-  width: clamp(48px, 9vh, 84px);
-  height: clamp(48px, 9vh, 84px);
+  width: clamp(40px, 8vh, 72px);
+  height: clamp(40px, 8vh, 72px);
+  color: #8b949e;
 }
 
+/* ACTIVACIÓN SOLO CUANDO EL PACIENTE MIRA A LA ZONA */
+.zone-yes.active {
+  background: linear-gradient(180deg, #064e3b 0%, #065f46 100%);
+}
+
+.zone-yes.active .zone-content {
+  opacity: 1;
+  transform: translateY(-4px);
+}
+.zone-yes.active .zone-title,
+.zone-yes.active .zone-icon,
+.zone-yes.active .zone-sub {
+  color: #ffffff;
+}
+
+.zone-no.active {
+  background: linear-gradient(180deg, #7f1d1d 0%, #991b1b 100%);
+}
+
+.zone-no.active .zone-content {
+  opacity: 1;
+  transform: translateY(4px);
+}
+.zone-no.active .zone-title,
+.zone-no.active .zone-icon,
+.zone-no.active .zone-sub {
+  color: #ffffff;
+}
+
+/* Barra de fijación progresiva */
 .progress-bar-bg {
   position: absolute;
   width: 100%;
-  height: clamp(12px, 2.2vh, 20px);
-  background: rgba(0, 0, 0, 0.5);
+  height: 12px;
+  background: rgba(0, 0, 0, 0.6);
   left: 0;
   z-index: 3;
 }
@@ -251,96 +266,29 @@ body, html, #root {
 .progress-fill {
   height: 100%;
   background: #ffffff;
-  box-shadow: 0 0 14px #ffffff;
+  box-shadow: 0 0 10px #ffffff;
   transition: width 0.04s linear;
 }
 
-/* Dock central durante el uso */
-.dock {
+/* FRANJA DIVISORIA CENTRAL MINIMALISTA (DESCANSO TOTAL) */
+.dock-clean {
   flex-shrink: 0;
-  height: 110px;
-  background-color: #12161f;
-  border-top: 1px solid #30363d;
-  border-bottom: 1px solid #30363d;
+  height: 36px;
+  background-color: #090c10;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  gap: 16px;
+  padding: 0 16px;
   z-index: 10;
-  position: relative;
 }
 
-.resting-target-container {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.resting-target {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  border: 2px dashed rgba(255, 255, 255, 0.25);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.03);
-  transition: all 0.2s ease;
-}
-
-.resting-inner-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #475569;
-  transition: all 0.2s ease;
-}
-
-.resting-label {
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: #8b949e;
-  margin-top: 3px;
-}
-
-.resting-target-container.is-resting .resting-target {
-  border: 2px solid #38bdf8;
-  background: rgba(56, 189, 248, 0.15);
-  box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
-}
-
-.resting-target-container.is-resting .resting-inner-dot {
-  background: #38bdf8;
-  box-shadow: 0 0 10px #38bdf8;
-  transform: scale(1.2);
-}
-
-.resting-target-container.is-resting .resting-label {
-  color: #38bdf8;
-}
-
-.dock-left, .dock-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  z-index: 2;
-}
-
+/* Vista previa de cámara en la calibración */
 .preview-wrapper {
-  width: clamp(65px, 10vw, 100px);
-  height: clamp(45px, 7vh, 65px);
+  width: 90px;
+  height: 60px;
   border-radius: 6px;
   overflow: hidden;
-  border: 1px solid #444c56;
+  border: 1px solid #30363d;
   background: #000;
   flex-shrink: 0;
 }
@@ -356,54 +304,45 @@ body, html, #root {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: clamp(0.75rem, 1.8vh, 0.88rem);
 }
 
 .status-led {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background-color: #f59e0b;
-  flex-shrink: 0;
 }
 
 .status-led.ready {
   background-color: #10b981;
-  box-shadow: 0 0 8px #10b981;
 }
 
 .control-slider {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   font-size: 0.75rem;
 }
 
 .control-slider input[type="range"] {
-  width: 100px;
+  width: 100%;
   accent-color: #2563eb;
   cursor: pointer;
 }
 
 .btn-action {
-  background: #21262d;
-  color: #c9d1d9;
-  border: 1px solid #30363d;
-  padding: 8px 14px;
-  font-size: 0.85rem;
-  border-radius: 8px;
+  background: transparent;
+  color: #6e7681;
+  border: none;
   cursor: pointer;
-  font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-  transition: all 0.2s;
+  justify-content: center;
+  transition: color 0.2s;
 }
 
 .btn-action:hover {
-  background: #30363d;
-  color: #fff;
+  color: #c9d1d9;
 }
 
 @keyframes spin {
@@ -413,27 +352,4 @@ body, html, #root {
 
 .spin {
   animation: spin 1s linear infinite;
-}
-
-@media (max-width: 768px) {
-  .calib-footer {
-    flex-direction: column;
-    gap: 12px;
-  }
-  .dock {
-    height: auto;
-    padding: 8px 12px;
-    flex-wrap: wrap;
-  }
-  .resting-target-container {
-    position: static;
-    transform: none;
-    order: -1;
-    width: 100%;
-    margin-bottom: 6px;
-  }
-  .dock-left, .dock-right {
-    width: 100%;
-    justify-content: space-between;
-  }
 }
