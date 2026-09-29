@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { ChevronUp, ChevronDown, RotateCcw, Play, CheckCircle2 } from 'lucide-react';
+import { ChevronUp, ChevronDown, RotateCcw, Play, Settings2, X } from 'lucide-react';
 
 export default function App() {
   const videoRef = useRef(null);
@@ -8,27 +8,31 @@ export default function App() {
   // Estados
   const [faceDetected, setFaceDetected] = useState(false);
   const [currentRatio, setCurrentRatio] = useState(0.40);
-  const [neutralPoint, setNeutralPoint] = useState(null); // null = Modo Calibración
+  const [neutralPoint, setNeutralPoint] = useState(null); // null = Pantalla de calibración
   const [activeZone, setActiveZone] = useState(null);     // 'UP' | 'DOWN' | null
   const [progress, setProgress] = useState(0);
   
-  // Estado exclusivo para el flujo de calibración inicial
+  // Panel de control para el cuidador (oculto por defecto)
+  const [showCaregiverMenu, setShowCaregiverMenu] = useState(false);
+
+  // Calibración inicial
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [calibProgress, setCalibProgress] = useState(0);
-  const [statusMsg, setStatusMsg] = useState('Esperando detección de rostro...');
+  const [statusMsg, setStatusMsg] = useState('Esperando cámara y rostro...');
 
   // Sensibilidad
   const [sensitivity, setSensitivity] = useState(0.035); 
-  const dwellTime = 1000; // 1 segundo fijo
+  const dwellTime = 1000; // 1 segundo sostenido para confirmar
 
-  // Referencias para temporizador
+  // Referencias internas
   const neutralPointRef = useRef(null);
   const activeZoneRef = useRef(null);
   const dwellStartRef = useRef(null);
   const lastTriggerRef = useRef(0);
   const historyRef = useRef([]);
+  const isRunningRef = useRef(false);
 
-  // Síntesis de voz en español
+  // Síntesis de voz accesible
   const speak = useCallback((text) => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -39,7 +43,7 @@ export default function App() {
     }
   }, []);
 
-  // Cálculo binocular de ratio
+  // Cálculo binocular del ratio de los ojos
   const calculateRatio = (landmarks) => {
     const topL = landmarks[159].y;
     const botL = landmarks[145].y;
@@ -59,20 +63,18 @@ export default function App() {
   };
 
   const evaluateGaze = useCallback((rawRatio) => {
-    // Suavizado de 5 lecturas
     historyRef.current.push(rawRatio);
     if (historyRef.current.length > 5) historyRef.current.shift();
     const ratio = historyRef.current.reduce((a, b) => a + b, 0) / historyRef.current.length;
     
     setCurrentRatio(parseFloat(ratio.toFixed(3)));
 
-    // Si aún está en la pantalla de calibración, no procesa SÍ / NO
     const neutral = neutralPointRef.current;
     if (neutral === null) return;
 
     const now = performance.now();
 
-    // Pausa protectora de 2 segundos post respuesta
+    // Pausa protectora de 2 segundos tras hablar
     if (now - lastTriggerRef.current < 2000) {
       resetSelection();
       return;
@@ -80,13 +82,12 @@ export default function App() {
 
     let detected = null;
 
-    // Regla correcta comprobada:
     if (ratio > neutral + sensitivity) {
-      detected = 'UP';   // Mirar arriba -> SÍ
+      detected = 'UP';   // Arriba -> SÍ
     } else if (ratio < neutral - sensitivity) {
-      detected = 'DOWN'; // Mirar abajo -> NO
+      detected = 'DOWN'; // Abajo -> NO
     } else {
-      detected = null;   // Centro / descanso
+      detected = null;   // Centro neutro de descanso
     }
 
     if (detected && detected === activeZoneRef.current) {
@@ -117,10 +118,10 @@ export default function App() {
     setProgress(0);
   };
 
+  // Inicialización de cámara compatible con iOS Safari y MediaPipe
   useEffect(() => {
     const FaceMeshClass = window.FaceMesh;
-    const CameraClass = window.Camera;
-    if (!FaceMeshClass || !CameraClass) return;
+    if (!FaceMeshClass) return;
 
     const faceMesh = new FaceMeshClass({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
@@ -135,27 +136,29 @@ export default function App() {
 
     faceMesh.onResults((results) => {
       const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      ctx.save();
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.save();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+
+        if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+          const lm = results.multiFaceLandmarks[0];
+          [468, 473].forEach((idx) => {
+            const pt = lm[idx];
+            ctx.beginPath();
+            ctx.arc(pt.x * canvas.width, pt.y * canvas.height, 3, 0, 2 * Math.PI);
+            ctx.fillStyle = '#00ffff';
+            ctx.fill();
+          });
+        }
+        ctx.restore();
+      }
 
       if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
         setFaceDetected(true);
         setStatusMsg('Rostro detectado');
-        const lm = results.multiFaceLandmarks[0];
-
-        // Puntos cian en los iris
-        [468, 473].forEach((idx) => {
-          const pt = lm[idx];
-          ctx.beginPath();
-          ctx.arc(pt.x * canvas.width, pt.y * canvas.height, 3, 0, 2 * Math.PI);
-          ctx.fillStyle = '#00ffff';
-          ctx.fill();
-        });
-
-        const ratio = calculateRatio(lm);
+        const ratio = calculateRatio(results.multiFaceLandmarks[0]);
         if (ratio !== null) {
           evaluateGaze(ratio);
         } else {
@@ -163,34 +166,63 @@ export default function App() {
         }
       } else {
         setFaceDetected(false);
-        setStatusMsg('No se detecta rostro');
+        setStatusMsg('Buscando rostro...');
         resetSelection();
       }
-      ctx.restore();
     });
 
-    let camera = null;
-    if (videoRef.current) {
-      camera = new CameraClass(videoRef.current, {
-        onFrame: async () => {
-          if (videoRef.current) {
-            await faceMesh.send({ image: videoRef.current });
+    let stream = null;
+    let animFrameId = null;
+
+    const startCamera = async () => {
+      try {
+        const constraints = {
+          audio: false,
+          video: {
+            facingMode: 'user',
+            width: { ideal: 640 },
+            height: { ideal: 480 }
           }
-        },
-        width: 640,
-        height: 480
-      });
-      camera.start().catch((err) => console.error(err));
-    }
+        };
+
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+
+          isRunningRef.current = true;
+
+          const processFrame = async () => {
+            if (isRunningRef.current && videoRef.current && videoRef.current.readyState >= 2) {
+              await faceMesh.send({ image: videoRef.current });
+            }
+            if (isRunningRef.current) {
+              animFrameId = requestAnimationFrame(processFrame);
+            }
+          };
+          processFrame();
+        }
+      } catch (err) {
+        console.error('Error con la cámara:', err);
+        setStatusMsg('Permite acceso a la cámara');
+      }
+    };
+
+    startCamera();
 
     return () => {
-      if (camera) camera.stop();
+      isRunningRef.current = false;
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      if (stream) stream.getTracks().forEach((track) => track.stop());
       faceMesh.close();
     };
   }, [evaluateGaze]);
 
-  // Rutina de calibración en 2 segundos
   const startCalibrationRoutine = () => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+    }
+
     setIsCalibrating(true);
     setCalibProgress(0);
     const samples = [];
@@ -213,22 +245,27 @@ export default function App() {
           const finalVal = parseFloat(avg.toFixed(3));
           neutralPointRef.current = finalVal;
           setNeutralPoint(finalVal);
+          setShowCaregiverMenu(false); // Cierra cualquier menú técnico
         } else {
-          alert('No se pudo registrar la mirada. Por favor intente de nuevo.');
+          alert('No se detectaron los ojos con claridad. Intenta de nuevo.');
         }
       }
     }, 50);
   };
 
-  const isResting = faceDetected && neutralPoint !== null && activeZone === null;
-
   return (
     <div className="app-container">
-      {/* Video Oculto */}
-      <video ref={videoRef} playsInline style={{ display: 'none' }} />
+      <video 
+        ref={videoRef} 
+        playsInline 
+        webkit-playsinline="true"
+        autoPlay 
+        muted 
+        style={{ display: 'none' }} 
+      />
 
       {/* ========================================================
-          FASE 1: PANTALLA INICIAL EXCLUSIVA DE CALIBRACIÓN
+          FASE 1: PANTALLA DE CALIBRACIÓN INICIAL
           ======================================================== */}
       {neutralPoint === null ? (
         <div className="calibration-screen">
@@ -239,7 +276,6 @@ export default function App() {
             </p>
           </div>
 
-          {/* Diana Central Gigante */}
           <div className="calib-center-target">
             <div className="target-outer-ring">
               <div className="target-inner-circle">
@@ -247,7 +283,7 @@ export default function App() {
               </div>
             </div>
             <span className="target-text">
-              {isCalibrating ? 'Guardando reposo...' : 'Mirar Aquí'}
+              {isCalibrating ? 'Guardando postura...' : 'Mirar Aquí'}
             </span>
 
             {isCalibrating && (
@@ -260,7 +296,7 @@ export default function App() {
             )}
           </div>
 
-          {/* Panel inferior para el cuidador */}
+          {/* El video y datos solo se muestran aquí para que el cuidador verifique */}
           <div className="calib-footer">
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div className="preview-wrapper">
@@ -293,7 +329,7 @@ export default function App() {
         </div>
       ) : (
         /* ========================================================
-           FASE 2: COMUNICADOR ACTIVO (SÍ / NO A PANTALLA COMPLETA)
+           FASE 2: MODO COMUNICACIÓN PURA (100% LIMPIO PARA EL PACIENTE)
            ======================================================== */
         <>
           {/* Zona Superior: SÍ */}
@@ -314,59 +350,38 @@ export default function App() {
             </div>
           </div>
 
-          {/* Barra divisoria con Diana de Descanso */}
-          <div className="dock">
-            <div className="dock-left">
-              <div className="preview-wrapper">
-                <canvas ref={canvasRef} className="preview-canvas" width="160" height="110" />
-              </div>
-
-              <div className="status-badge">
-                <span className={`status-led ${faceDetected ? 'ready' : ''}`} />
-                <div>
-                  <small style={{ opacity: 0.85, fontFamily: 'monospace' }}>
-                    Ojo: <b>{currentRatio}</b> | Base: <b>{neutralPoint}</b>
-                  </small>
-                </div>
-              </div>
+          {/* FRANJA CENTRAL MINIMALISTA (ZONA DE DESCANSO VACÍA) */}
+          <div 
+            className="dock" 
+            style={{ 
+              height: '48px', 
+              padding: '0 16px',
+              backgroundColor: '#0d1117',
+              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+            }}
+          >
+            {/* Pequeño punto LED de estado en la esquina (apenas visible) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span 
+                className={`status-led ${faceDetected ? 'ready' : ''}`} 
+                style={{ width: '8px', height: '8px' }}
+                title={faceDetected ? 'Rostro conectado' : 'Sin rostro'}
+              />
             </div>
 
-            {/* Diana de Descanso en Modo Activo */}
-            <div className={`resting-target-container ${isResting ? 'is-resting' : ''}`}>
-              <div className="resting-target">
-                <div className="resting-inner-dot" />
-              </div>
-              <span className="resting-label">
-                {isResting ? 'Descansando' : 'Centro'}
-              </span>
-            </div>
+            {/* CENTRO VACÍO: Descanso visual absoluto */}
+            <div style={{ flex: 1 }} />
 
-            {/* Controles para el acompañante */}
-            <div className="dock-right">
-              <div className="control-slider">
-                <span>Esfuerzo: {sensitivity === 0.025 ? 'Leve' : sensitivity === 0.035 ? 'Medio' : 'Alto'}</span>
-                <input 
-                  type="range" 
-                  min="0.020" 
-                  max="0.055" 
-                  step="0.005"
-                  value={sensitivity} 
-                  onChange={(e) => setSensitivity(parseFloat(e.target.value))} 
-                />
-              </div>
-
-              <button 
-                className="btn-action" 
-                onClick={() => {
-                  neutralPointRef.current = null;
-                  setNeutralPoint(null); // Regresa a la pantalla de calibración limpia
-                }}
-                title="Volver a calibrar la postura"
-              >
-                <RotateCcw size={15} />
-                Recalibrar
-              </button>
-            </div>
+            {/* Botón discreto de Ajustes para el Cuidador */}
+            <button 
+              className="btn-action" 
+              style={{ padding: '6px 12px', fontSize: '0.8rem', background: 'transparent', border: 'none', opacity: 0.6 }}
+              onClick={() => setShowCaregiverMenu(!showCaregiverMenu)}
+              title="Ajustes de cuidador"
+            >
+              <Settings2 size={18} />
+            </button>
           </div>
 
           {/* Zona Inferior: NO */}
@@ -386,6 +401,64 @@ export default function App() {
               <ChevronDown className="zone-icon" strokeWidth={3.5} />
             </div>
           </div>
+
+          {/* MENÚ FLOTANTE OPCIONAL DEL CUIDADOR (solo aparece al tocar la ruedita) */}
+          {showCaregiverMenu && (
+            <div style={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              background: '#161b22',
+              border: '1px solid #30363d',
+              padding: '20px',
+              borderRadius: '12px',
+              zIndex: 100,
+              boxShadow: '0 8px 30px rgba(0,0,0,0.8)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              minWidth: '280px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 700 }}>Ajustes de Asistencia</span>
+                <button 
+                  onClick={() => setShowCaregiverMenu(false)}
+                  style={{ background: 'none', border: 'none', color: '#8b949e', cursor: 'pointer' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div style={{ fontSize: '0.85rem', color: '#8b949e' }}>
+                Posición: <b>{currentRatio}</b> | Base: <b>{neutralPoint}</b>
+              </div>
+
+              <div className="control-slider">
+                <span>Esfuerzo: {sensitivity === 0.025 ? 'Leve' : sensitivity === 0.035 ? 'Medio' : 'Alto'}</span>
+                <input 
+                  type="range" 
+                  min="0.020" 
+                  max="0.055" 
+                  step="0.005"
+                  value={sensitivity} 
+                  onChange={(e) => setSensitivity(parseFloat(e.target.value))} 
+                />
+              </div>
+
+              <button 
+                className="btn-action" 
+                style={{ width: '100%', justifyContent: 'center', background: '#238636', color: '#fff', border: 'none', padding: '10px' }}
+                onClick={() => {
+                  neutralPointRef.current = null;
+                  setNeutralPoint(null); // Regresa a calibración inicial
+                }}
+              >
+                <RotateCcw size={16} />
+                Volver a Calibrar Mirada
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>
