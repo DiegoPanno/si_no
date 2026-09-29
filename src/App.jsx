@@ -1,36 +1,39 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { ChevronUp, ChevronDown, RotateCcw, Play, Settings2, X } from 'lucide-react';
+import { ChevronUp, ChevronDown, RotateCcw, Play, Settings2, X, RefreshCw } from 'lucide-react';
 
 export default function App() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
-  // Estados
+  // Estados de interfaz
   const [faceDetected, setFaceDetected] = useState(false);
   const [currentRatio, setCurrentRatio] = useState(0.40);
   const [neutralPoint, setNeutralPoint] = useState(null); // null = Modo Calibración
   const [activeZone, setActiveZone] = useState(null);     // 'UP' | 'DOWN' | null
   const [progress, setProgress] = useState(0);
-  
-  // Menú discreto para el cuidador
   const [showCaregiverMenu, setShowCaregiverMenu] = useState(false);
 
   // Calibración inicial
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [calibProgress, setCalibProgress] = useState(0);
-  const [statusMsg, setStatusMsg] = useState('Buscando cámara y rostro...');
+  const [statusMsg, setStatusMsg] = useState('Buscando rostro...');
 
   // Sensibilidad
-  const [sensitivity, setSensitivity] = useState(0.035); 
-  const dwellTime = 1000; // 1 segundo sostenido para confirmar
+  const [sensitivity, setSensitivity] = useState(0.038); 
+  const dwellTime = 1000; // 1 segundo fijo
 
-  // Referencias internas
+  // Referencias para temporizadores y filtros de auto-estabilización
   const neutralPointRef = useRef(null);
   const activeZoneRef = useRef(null);
   const dwellStartRef = useRef(null);
   const lastTriggerRef = useRef(0);
   const historyRef = useRef([]);
   const isRunningRef = useRef(false);
+
+  // Referencias para Auto-Drift (auto-calibración suave en reposo)
+  const restingSamplesRef = useRef([]);
+  const lastGazeMovementRef = useRef(performance.now());
+  const initialHeadPitchRef = useRef(null);
 
   // Síntesis de voz accesible en español
   const speak = useCallback((text) => {
@@ -43,26 +46,47 @@ export default function App() {
     }
   }, []);
 
-  // Cálculo binocular del ratio de los ojos
-  const calculateRatio = (landmarks) => {
+  // Cálculo binocular con compensación de cabeceo (Pitch)
+  const calculateEyeRatioWithHeadCompensation = (landmarks) => {
+    // Puntos Ojo Izquierdo: 159 (sup), 145 (inf), 468 (iris)
     const topL = landmarks[159].y;
     const botL = landmarks[145].y;
     const irisL = landmarks[468].y;
     const hL = botL - topL;
 
+    // Puntos Ojo Derecho: 386 (sup), 374 (inf), 473 (iris)
     const topR = landmarks[386].y;
     const botR = landmarks[374].y;
     const irisR = landmarks[473].y;
     const hR = botR - topR;
 
-    if (hL < 0.007 || hR < 0.007) return null; // Ojos cerrados
+    if (hL < 0.007 || hR < 0.007) return null; // Ojos cerrados o parpadeo
 
     const rL = (irisL - topL) / hL;
     const rR = (irisR - topR) / hR;
-    return (rL + rR) / 2;
+    const eyeRatioRaw = (rL + rR) / 2;
+
+    // Compensación de Cabeceo (Inclinación vertical de la cabeza)
+    // Entrecejo: 168, Punta de la nariz: 1
+    const forehead = landmarks[168].y;
+    const nose = landmarks[1].y;
+    const headPitch = nose - forehead;
+
+    if (initialHeadPitchRef.current === null) {
+      initialHeadPitchRef.current = headPitch;
+    }
+
+    // Diferencia respecto a la postura inicial de la cabeza
+    const headDelta = headPitch - initialHeadPitchRef.current;
+    
+    // Factor de corrección: si la cabeza sube/baja, neutralizamos el sesgo del iris
+    const compensatedRatio = eyeRatioRaw - (headDelta * 0.45);
+
+    return compensatedRatio;
   };
 
   const evaluateGaze = useCallback((rawRatio) => {
+    // Suavizado móvil de 5 lecturas
     historyRef.current.push(rawRatio);
     if (historyRef.current.length > 5) historyRef.current.shift();
     const ratio = historyRef.current.reduce((a, b) => a + b, 0) / historyRef.current.length;
@@ -87,9 +111,30 @@ export default function App() {
     } else if (ratio < neutral - sensitivity) {
       detected = 'DOWN'; // Abajo -> NO
     } else {
-      detected = null;   // Centro neutro de descanso
+      detected = null;   // Centro neutro de reposo
     }
 
+    // ========================================================
+    // AUTO-DRIFT: Corrección suave del reposo si la persona está descansando
+    // ========================================================
+    if (detected === null) {
+      restingSamplesRef.current.push(ratio);
+      if (restingSamplesRef.current.length > 30) restingSamplesRef.current.shift();
+
+      // Si lleva más de 2.5 seg quieto en reposo, movemos sutilmente la base (0.5% por cuadro)
+      if (now - lastGazeMovementRef.current > 2500 && restingSamplesRef.current.length >= 20) {
+        const restingAvg = restingSamplesRef.current.reduce((a, b) => a + b, 0) / restingSamplesRef.current.length;
+        // Filtro pasa-bajos para corregir lentamente la base sin saltos bruscos
+        const updatedBase = neutral * 0.96 + restingAvg * 0.04;
+        neutralPointRef.current = parseFloat(updatedBase.toFixed(3));
+        setNeutralPoint(neutralPointRef.current);
+      }
+    } else {
+      lastGazeMovementRef.current = now;
+      restingSamplesRef.current = [];
+    }
+
+    // Procesamiento de selección
     if (detected && detected === activeZoneRef.current) {
       const elapsed = now - dwellStartRef.current;
       const pct = Math.min((elapsed / dwellTime) * 100, 100);
@@ -118,7 +163,7 @@ export default function App() {
     setProgress(0);
   };
 
-  // Inicialización de cámara compatible con iOS Safari y PC
+  // Inicialización de cámara y MediaPipe
   useEffect(() => {
     const FaceMeshClass = window.FaceMesh;
     if (!FaceMeshClass) return;
@@ -158,7 +203,7 @@ export default function App() {
       if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
         setFaceDetected(true);
         setStatusMsg('Rostro detectado');
-        const ratio = calculateRatio(results.multiFaceLandmarks[0]);
+        const ratio = calculateEyeRatioWithHeadCompensation(results.multiFaceLandmarks[0]);
         if (ratio !== null) {
           evaluateGaze(ratio);
         } else {
@@ -218,6 +263,7 @@ export default function App() {
     };
   }, [evaluateGaze]);
 
+  // Calibración inicial asistida
   const startCalibrationRoutine = () => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
@@ -226,6 +272,7 @@ export default function App() {
     setIsCalibrating(true);
     setCalibProgress(0);
     const samples = [];
+    initialHeadPitchRef.current = null; // Reiniciar referencia de cabeza
     const startTime = performance.now();
     const duration = 2000;
 
@@ -251,6 +298,14 @@ export default function App() {
         }
       }
     }, 50);
+  };
+
+  // Reajuste rápido en 1 toque (0.6 segundos) sin cambiar de pantalla
+  const quickRealign = () => {
+    if (!faceDetected || !currentRatio) return;
+    neutralPointRef.current = currentRatio;
+    setNeutralPoint(currentRatio);
+    initialHeadPitchRef.current = null;
   };
 
   return (
@@ -328,7 +383,7 @@ export default function App() {
         </div>
       ) : (
         /* ========================================================
-           FASE 2: MODO CLÍNICO DE BAJO ESTÍMULO (SÍ / NO)
+           FASE 2: MODO CLÍNICO ESTABILIZADO (SÍ / NO)
            ======================================================== */
         <>
           {/* Zona Superior: SÍ */}
@@ -349,17 +404,37 @@ export default function App() {
             </div>
           </div>
 
-          {/* FRANJA CENTRAL VACÍA Y OSCURA (DESCANSO TOTAL) */}
-          <div className="dock-clean">
-            {/* Indicador LED ultra-discreto en la esquina */}
-            <span 
-              className={`status-led ${faceDetected ? 'ready' : ''}`} 
-              title={faceDetected ? 'Rostro conectado' : 'Sin rostro'}
-            />
+          {/* FRANJA CENTRAL DIVISORIA Y REAJUSTE EN 1 TOQUE */}
+          <div className="dock-clean" style={{ height: '42px', padding: '0 16px' }}>
+            {/* LED discreto de estado */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span 
+                className={`status-led ${faceDetected ? 'ready' : ''}`} 
+                title={faceDetected ? 'Rostro conectado' : 'Sin rostro'}
+              />
+            </div>
 
-            <div style={{ flex: 1 }} />
+            {/* ZONA DE DESCANSO CON TOQUE PARA REAJUSTE RÁPIDO */}
+            <button 
+              onClick={quickRealign}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#484f58',
+                fontSize: '0.72rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 10px',
+                borderRadius: '6px'
+              }}
+              title="Toca aquí si el paciente se movió para reajustar el centro de inmediato"
+            >
+              <RefreshCw size={11} /> Reajuste de reposo
+            </button>
 
-            {/* Botón de ajustes solo para el cuidador */}
+            {/* Menú de acompañante */}
             <button 
               className="btn-action" 
               onClick={() => setShowCaregiverMenu(!showCaregiverMenu)}
@@ -387,7 +462,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Menú modal opcional para el cuidador */}
+          {/* Menú de configuración para el cuidador */}
           {showCaregiverMenu && (
             <div style={{
               position: 'fixed',
@@ -403,7 +478,7 @@ export default function App() {
               display: 'flex',
               flexDirection: 'column',
               gap: '14px',
-              minWidth: '270px'
+              minWidth: '280px'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>Ajustes de Asistencia</span>
@@ -416,16 +491,16 @@ export default function App() {
               </div>
 
               <div style={{ fontSize: '0.82rem', color: '#8b949e' }}>
-                Posición: <b>{currentRatio}</b> | Base: <b>{neutralPoint}</b>
+                Ojo (corregido): <b>{currentRatio}</b> | Base: <b>{neutralPoint}</b>
               </div>
 
               <div className="control-slider">
-                <span>Esfuerzo: {sensitivity === 0.025 ? 'Leve' : sensitivity === 0.035 ? 'Medio' : 'Alto'}</span>
+                <span>Esfuerzo necesario: {sensitivity <= 0.028 ? 'Muy Leve' : sensitivity <= 0.040 ? 'Medio' : 'Alto'}</span>
                 <input 
                   type="range" 
-                  min="0.020" 
+                  min="0.022" 
                   max="0.055" 
-                  step="0.005"
+                  step="0.003"
                   value={sensitivity} 
                   onChange={(e) => setSensitivity(parseFloat(e.target.value))} 
                 />
@@ -452,7 +527,7 @@ export default function App() {
                 }}
               >
                 <RotateCcw size={16} />
-                Volver a Calibrar
+                Calibración Completa
               </button>
             </div>
           )}
