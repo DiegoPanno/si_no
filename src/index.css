@@ -26,7 +26,153 @@ body, html, #root {
   height: 100dvh;
 }
 
-/* Zonas de respuesta grandes */
+/* ========================================================
+   FASE 1: PANTALLA EXCLUSIVA DE CALIBRACIÓN (CENTRO LIMPIO)
+   ======================================================== */
+.calibration-screen {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  background: radial-gradient(circle at center, #161b22 0%, #090d16 100%);
+  position: relative;
+}
+
+.calib-header {
+  text-align: center;
+  max-width: 500px;
+}
+
+.calib-title {
+  font-size: clamp(1.4rem, 4vw, 2.2rem);
+  font-weight: 800;
+  color: #f0f6fc;
+  margin-bottom: 6px;
+}
+
+.calib-subtitle {
+  font-size: clamp(0.9rem, 2.5vw, 1.15rem);
+  color: #8b949e;
+}
+
+/* Diana central gigante para fijar la mirada */
+.calib-center-target {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.target-outer-ring {
+  width: clamp(160px, 35vmin, 240px);
+  height: clamp(160px, 35vmin, 240px);
+  border-radius: 50%;
+  border: 4px dashed #38bdf8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse-ring 2.5s infinite ease-in-out;
+  background: rgba(56, 189, 248, 0.05);
+  position: relative;
+}
+
+.target-inner-circle {
+  width: clamp(60px, 14vmin, 90px);
+  height: clamp(60px, 14vmin, 90px);
+  border-radius: 50%;
+  background: #0284c7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 30px rgba(56, 189, 248, 0.5);
+}
+
+.target-center-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 12px #ffffff;
+}
+
+.target-text {
+  margin-top: 18px;
+  font-size: clamp(1.1rem, 3vw, 1.4rem);
+  font-weight: 700;
+  color: #38bdf8;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* Barra de progreso de la calibración */
+.calib-progress-track {
+  width: clamp(200px, 45vmin, 320px);
+  height: 12px;
+  background: #21262d;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 16px;
+  border: 1px solid #30363d;
+}
+
+.calib-progress-bar {
+  height: 100%;
+  background: #10b981;
+  transition: width 0.08s linear;
+}
+
+/* Footer con controles para el cuidador */
+.calib-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 700px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  padding: 12px 20px;
+  border-radius: 14px;
+  gap: 16px;
+}
+
+.btn-start-calib {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  font-size: 1.1rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s;
+}
+
+.btn-start-calib:hover {
+  background: #1d4ed8;
+}
+
+.btn-start-calib:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.96); opacity: 0.7; }
+  50% { transform: scale(1.04); opacity: 1; box-shadow: 0 0 40px rgba(56, 189, 248, 0.25); }
+  100% { transform: scale(0.96); opacity: 0.7; }
+}
+
+/* ========================================================
+   FASE 2: MODO COMUNICADOR ACTIVO (SÍ / NO)
+   ======================================================== */
 .zone {
   flex: 1;
   min-height: 0;
@@ -70,7 +216,7 @@ body, html, #root {
 }
 
 .zone-title {
-  font-size: clamp(3rem, 11vh, 6.5rem);
+  font-size: clamp(3.2rem, 12vh, 7rem);
   font-weight: 900;
   letter-spacing: 3px;
   line-height: 1;
@@ -78,7 +224,7 @@ body, html, #root {
 }
 
 .zone-sub {
-  font-size: clamp(0.85rem, 2.3vh, 1.25rem);
+  font-size: clamp(0.9rem, 2.5vh, 1.3rem);
   opacity: 0.85;
   font-weight: 600;
   text-transform: uppercase;
@@ -86,41 +232,33 @@ body, html, #root {
 }
 
 .zone-icon {
-  width: clamp(44px, 8.5vh, 80px);
-  height: clamp(44px, 8.5vh, 80px);
+  width: clamp(48px, 9vh, 84px);
+  height: clamp(48px, 9vh, 84px);
 }
 
-/* Barra de progreso de fijación */
 .progress-bar-bg {
   position: absolute;
   width: 100%;
-  height: clamp(10px, 2vh, 18px);
+  height: clamp(12px, 2.2vh, 20px);
   background: rgba(0, 0, 0, 0.5);
   left: 0;
   z-index: 3;
 }
 
-.zone-yes .progress-bar-bg {
-  bottom: 0;
-}
-
-.zone-no .progress-bar-bg {
-  top: 0;
-}
+.zone-yes .progress-bar-bg { bottom: 0; }
+.zone-no .progress-bar-bg { top: 0; }
 
 .progress-fill {
   height: 100%;
   background: #ffffff;
-  box-shadow: 0 0 12px #ffffff;
+  box-shadow: 0 0 14px #ffffff;
   transition: width 0.04s linear;
 }
 
-/* ========================================================
-   FRANJA CENTRAL Y ZONA DE DESCANSO
-   ======================================================== */
+/* Dock central durante el uso */
 .dock {
   flex-shrink: 0;
-  height: 130px;
+  height: 110px;
   background-color: #12161f;
   border-top: 1px solid #30363d;
   border-bottom: 1px solid #30363d;
@@ -133,7 +271,6 @@ body, html, #root {
   position: relative;
 }
 
-/* Diana de descanso central */
 .resting-target-container {
   position: absolute;
   left: 50%;
@@ -147,52 +284,50 @@ body, html, #root {
 }
 
 .resting-target {
-  width: 58px;
-  height: 58px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   border: 2px dashed rgba(255, 255, 255, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(255, 255, 255, 0.03);
-  transition: all 0.25s ease;
+  transition: all 0.2s ease;
 }
 
 .resting-inner-dot {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: #475569;
-  transition: all 0.25s ease;
+  transition: all 0.2s ease;
 }
 
 .resting-label {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 1px;
   text-transform: uppercase;
   color: #8b949e;
-  margin-top: 4px;
+  margin-top: 3px;
 }
 
-/* Estado activo cuando la mirada está descansando en el centro */
 .resting-target-container.is-resting .resting-target {
   border: 2px solid #38bdf8;
-  background: rgba(56, 189, 248, 0.12);
-  box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+  background: rgba(56, 189, 248, 0.15);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
 }
 
 .resting-target-container.is-resting .resting-inner-dot {
   background: #38bdf8;
   box-shadow: 0 0 10px #38bdf8;
-  transform: scale(1.25);
+  transform: scale(1.2);
 }
 
 .resting-target-container.is-resting .resting-label {
   color: #38bdf8;
 }
 
-/* Lado izquierdo y derecho */
 .dock-left, .dock-right {
   display: flex;
   align-items: center;
@@ -201,9 +336,9 @@ body, html, #root {
 }
 
 .preview-wrapper {
-  width: clamp(75px, 11vw, 115px);
-  height: clamp(52px, 8vh, 76px);
-  border-radius: 8px;
+  width: clamp(65px, 10vw, 100px);
+  height: clamp(45px, 7vh, 65px);
+  border-radius: 6px;
   overflow: hidden;
   border: 1px solid #444c56;
   background: #000;
@@ -240,22 +375,22 @@ body, html, #root {
 .control-slider {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   font-size: 0.75rem;
 }
 
 .control-slider input[type="range"] {
-  width: 110px;
+  width: 100px;
   accent-color: #2563eb;
   cursor: pointer;
 }
 
 .btn-action {
-  background: #2563eb;
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  font-size: clamp(0.75rem, 1.8vh, 0.88rem);
+  background: #21262d;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  padding: 8px 14px;
+  font-size: 0.85rem;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
@@ -263,16 +398,12 @@ body, html, #root {
   align-items: center;
   gap: 6px;
   white-space: nowrap;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
 .btn-action:hover {
-  background: #1d4ed8;
-}
-
-.btn-action:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  background: #30363d;
+  color: #fff;
 }
 
 @keyframes spin {
@@ -284,23 +415,23 @@ body, html, #root {
   animation: spin 1s linear infinite;
 }
 
-/* Responsive para pantallas estrechas / móvil vertical */
 @media (max-width: 768px) {
+  .calib-footer {
+    flex-direction: column;
+    gap: 12px;
+  }
   .dock {
     height: auto;
-    padding: 10px 12px;
+    padding: 8px 12px;
     flex-wrap: wrap;
-    justify-content: center;
   }
-
   .resting-target-container {
     position: static;
     transform: none;
     order: -1;
     width: 100%;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
-
   .dock-left, .dock-right {
     width: 100%;
     justify-content: space-between;
