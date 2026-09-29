@@ -38,20 +38,17 @@ export default function App() {
 
   // Cálculo binocular promediado
   const calculateRatio = (landmarks) => {
-    // Ojo Izquierdo: párpados 159 (arriba) y 145 (abajo), iris 468
     const topL = landmarks[159].y;
     const botL = landmarks[145].y;
     const irisL = landmarks[468].y;
     const hL = botL - topL;
 
-    // Ojo Derecho: párpados 386 (arriba) y 374 (abajo), iris 473
     const topR = landmarks[386].y;
     const botR = landmarks[374].y;
     const irisR = landmarks[473].y;
     const hR = botR - topR;
 
-    // Ignorar si parpadea o cierra los ojos
-    if (hL < 0.007 || hR < 0.007) return null;
+    if (hL < 0.007 || hR < 0.007) return null; // Ojos cerrados o parpadeo
 
     const rL = (irisL - topL) / hL;
     const rR = (irisR - topR) / hR;
@@ -59,7 +56,6 @@ export default function App() {
   };
 
   const evaluateGaze = useCallback((rawRatio) => {
-    // Suavizado móvil (últimas 5 lecturas) para estabilizar la señal
     historyRef.current.push(rawRatio);
     if (historyRef.current.length > 5) historyRef.current.shift();
     const ratio = historyRef.current.reduce((a, b) => a + b, 0) / historyRef.current.length;
@@ -71,7 +67,7 @@ export default function App() {
 
     const now = performance.now();
 
-    // Pausa protectora de 2 segundos tras hablar
+    // Pausa de 2 segundos tras emitir respuesta
     if (now - lastTriggerRef.current < 2000) {
       resetSelection();
       return;
@@ -79,18 +75,15 @@ export default function App() {
 
     let detected = null;
 
-    // REGLA FÍSICA REAL:
-    // Al mirar ARRIBA: el iris sube acercándose al párpado superior -> ratio disminuye
-    if (ratio < neutral - sensitivity) {
-      detected = 'UP';
+    // INVERTIDO: Ajustado al comportamiento exacto de tu cámara y ojos
+    if (ratio > neutral + sensitivity) {
+      detected = 'UP';   // Si el ratio aumenta -> SÍ (Arriba)
     } 
-    // Al mirar ABAJO: el iris baja alejándose del párpado superior -> ratio aumenta
-    else if (ratio > neutral + sensitivity) {
-      detected = 'DOWN';
+    else if (ratio < neutral - sensitivity) {
+      detected = 'DOWN'; // Si el ratio disminuye -> NO (Abajo)
     } 
-    // ZONA DE DESCANSO (CENTRO)
     else {
-      detected = null;
+      detected = null;   // Zona neutra de descanso
     }
 
     if (detected && detected === activeZoneRef.current) {
@@ -149,7 +142,7 @@ export default function App() {
         setFaceDetected(true);
         const lm = results.multiFaceLandmarks[0];
 
-        // Dibujar los puntos del iris en celeste
+        // Dibujar pupilas en celeste para confirmar seguimiento
         [468, 473].forEach((idx) => {
           const pt = lm[idx];
           ctx.beginPath();
@@ -191,7 +184,6 @@ export default function App() {
     };
   }, [evaluateGaze]);
 
-  // Calibración pasiva asistida (2 segundos mirando al centro)
   const handleCalibrate = () => {
     setIsCalibrating(true);
     setStatusMsg('Registrando centro...');
@@ -216,7 +208,6 @@ export default function App() {
     }, 1800);
   };
 
-  // ¿El paciente está mirando a la zona de descanso?
   const isResting = faceDetected && neutralPoint !== null && activeZone === null;
 
   return (
@@ -243,8 +234,6 @@ export default function App() {
 
       {/* Barra Central con Diana de Descanso */}
       <div className="dock">
-        
-        {/* Izquierda: Vista previa de cámara y datos técnicos */}
         <div className="dock-left">
           <div className="preview-wrapper">
             <canvas ref={canvasRef} className="preview-canvas" width="160" height="110" />
@@ -261,7 +250,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* CENTRO: DIANA VISUAL DE DESCANSO */}
+        {/* DIANA DE DESCANSO */}
         <div className={`resting-target-container ${isResting ? 'is-resting' : ''}`}>
           <div className="resting-target">
             <div className="resting-inner-dot" />
@@ -271,7 +260,7 @@ export default function App() {
           </span>
         </div>
 
-        {/* Derecha: Controles para el acompañante */}
+        {/* Controles para el cuidador */}
         <div className="dock-right">
           <div className="control-slider">
             <span>Esfuerzo: {sensitivity === 0.025 ? 'Leve' : sensitivity === 0.035 ? 'Medio' : 'Alto'}</span>
@@ -295,7 +284,6 @@ export default function App() {
             {isCalibrating ? 'Guardando...' : 'Calibrar Centro'}
           </button>
         </div>
-
       </div>
 
       {/* Zona Inferior: NO */}
