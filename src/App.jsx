@@ -231,7 +231,7 @@ export default function App() {
         onClick={() => speak('Sí')}
       >
         <div className="zone-content">
-          <ChevronUp size={84} strokeWidth={3.5} />
+          <ChevronUp className="zone-icon" strokeWidth={3.5} />
           <span className="zone-title">SÍ</span>
           <span className="zone-sub">Mirar Arriba</span>
         </div>
@@ -324,7 +324,7 @@ export default function App() {
         <div className="zone-content">
           <span className="zone-title">NO</span>
           <span className="zone-sub">Mirar Abajo</span>
-          <ChevronDown size={84} strokeWidth={3.5} />
+          <ChevronDown className="zone-icon" strokeWidth={3.5} />
         </div>
       </div>
     </div>

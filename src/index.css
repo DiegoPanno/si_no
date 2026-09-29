@@ -3,14 +3,18 @@
   margin: 0;
   padding: 0;
   user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
 }
 
 body, html, #root {
   width: 100%;
   height: 100%;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background-color: #0d1117;
+  background-color: #0b0f17;
   color: #ffffff;
 }
 
@@ -19,68 +23,79 @@ body, html, #root {
   flex-direction: column;
   width: 100vw;
   height: 100vh;
+  height: 100dvh; /* Altura dinámica para celulares con barra de navegación */
 }
 
 /* Zonas de respuesta grandes y de alto contraste */
 .zone {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   position: relative;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
+  transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
+  padding: 10px;
 }
 
 .zone-yes {
   background: linear-gradient(180deg, #064e3b 0%, #065f46 100%);
-  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.15);
 }
 
 .zone-yes.active {
   background: linear-gradient(180deg, #059669 0%, #10b981 100%);
-  box-shadow: inset 0 0 50px rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 0 60px rgba(255, 255, 255, 0.35);
 }
 
 .zone-no {
   background: linear-gradient(180deg, #7f1d1d 0%, #991b1b 100%);
-  border-top: 2px solid rgba(255, 255, 255, 0.1);
+  border-top: 2px solid rgba(255, 255, 255, 0.15);
 }
 
 .zone-no.active {
   background: linear-gradient(180deg, #dc2626 0%, #ef4444 100%);
-  box-shadow: inset 0 0 50px rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 0 60px rgba(255, 255, 255, 0.35);
 }
 
 .zone-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 4px;
   z-index: 2;
 }
 
 .zone-title {
-  font-size: clamp(3.5rem, 8vw, 6rem);
+  font-size: clamp(3rem, 12vh, 6.5rem);
   font-weight: 900;
-  letter-spacing: 4px;
-  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  letter-spacing: 3px;
+  line-height: 1;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
 }
 
 .zone-sub {
-  font-size: 1.1rem;
-  opacity: 0.8;
-  font-weight: 500;
+  font-size: clamp(0.85rem, 2.5vh, 1.25rem);
+  opacity: 0.85;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-/* Barra de progreso de fijación (Dwell Time) */
+.zone-icon {
+  width: clamp(48px, 9vh, 84px);
+  height: clamp(48px, 9vh, 84px);
+}
+
+/* Barras de progreso de dwell time */
 .progress-bar-bg {
   position: absolute;
   width: 100%;
-  height: 16px;
-  background: rgba(0, 0, 0, 0.45);
+  height: clamp(10px, 2vh, 18px);
+  background: rgba(0, 0, 0, 0.5);
   left: 0;
   z-index: 3;
 }
@@ -96,20 +111,21 @@ body, html, #root {
 .progress-fill {
   height: 100%;
   background: #ffffff;
-  box-shadow: 0 0 10px #ffffff;
+  box-shadow: 0 0 12px #ffffff;
   transition: width 0.04s linear;
 }
 
-/* Panel central de control y cámara */
+/* Barra central / Dock para cuidador */
 .dock {
-  height: 110px;
+  flex-shrink: 0;
   background-color: #161b22;
-  border-top: 2px solid #30363d;
-  border-bottom: 2px solid #30363d;
+  border-top: 1px solid #30363d;
+  border-bottom: 1px solid #30363d;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 8px 16px;
+  gap: 12px;
   z-index: 10;
 }
 
@@ -119,23 +135,36 @@ body, html, #root {
   gap: 12px;
 }
 
+.preview-wrapper {
+  width: clamp(70px, 12vw, 120px);
+  height: clamp(50px, 8vh, 80px);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #444c56;
+  background: #000;
+  flex-shrink: 0;
+}
+
+.preview-canvas {
+  width: 100%;
+  height: 100%;
+  transform: scaleX(-1);
+  display: block;
+}
+
 .status-badge {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.95rem;
-  font-weight: 500;
-  background: #21262d;
-  padding: 8px 14px;
-  border-radius: 20px;
-  border: 1px solid #30363d;
+  font-size: clamp(0.75rem, 1.8vh, 0.9rem);
 }
 
 .status-led {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background-color: #f59e0b;
+  flex-shrink: 0;
 }
 
 .status-led.ready {
@@ -143,38 +172,35 @@ body, html, #root {
   box-shadow: 0 0 8px #10b981;
 }
 
-.preview-wrapper {
-  width: 120px;
-  height: 80px;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 2px solid #30363d;
-  background: #000;
+/* Control deslizante de sensibilidad */
+.control-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.75rem;
 }
 
-.preview-canvas {
-  width: 100%;
-  height: 100%;
-  transform: scaleX(-1);
+.control-slider input[type="range"] {
+  width: 100px;
+  accent-color: #2563eb;
+  cursor: pointer;
 }
 
+/* Botón de calibración */
 .btn-action {
   background: #2563eb;
   color: white;
   border: none;
-  padding: 10px 18px;
-  font-size: 0.95rem;
+  padding: 8px 14px;
+  font-size: clamp(0.75rem, 1.8vh, 0.9rem);
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
   display: flex;
   align-items: center;
   gap: 6px;
-  transition: background 0.2s;
-}
-
-.btn-action:hover {
-  background: #1d4ed8;
+  white-space: nowrap;
+  transition: opacity 0.2s, background 0.2s;
 }
 
 .btn-action:disabled {
@@ -189,4 +215,34 @@ body, html, #root {
 
 .spin {
   animation: spin 1s linear infinite;
+}
+
+/* ========================================================
+   ADAPTACIÓN RESPONSIVE MOBILE (PANTALLAS CHICAS / VERTICAL)
+   ======================================================== */
+@media (max-width: 768px) {
+  .dock {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .dock-left {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .dock-right {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .control-slider input[type="range"] {
+    width: 80px;
+  }
+
+  .zone-title {
+    font-size: clamp(2.6rem, 10vh, 4.5rem);
+  }
 }
