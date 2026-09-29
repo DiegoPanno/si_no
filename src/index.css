@@ -23,10 +23,10 @@ body, html, #root {
   flex-direction: column;
   width: 100vw;
   height: 100vh;
-  height: 100dvh; /* Altura dinámica para celulares con barra de navegación */
+  height: 100dvh;
 }
 
-/* Zonas de respuesta grandes y de alto contraste */
+/* Zonas de respuesta grandes */
 .zone {
   flex: 1;
   min-height: 0;
@@ -42,7 +42,7 @@ body, html, #root {
 
 .zone-yes {
   background: linear-gradient(180deg, #064e3b 0%, #065f46 100%);
-  border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.12);
 }
 
 .zone-yes.active {
@@ -52,7 +52,7 @@ body, html, #root {
 
 .zone-no {
   background: linear-gradient(180deg, #7f1d1d 0%, #991b1b 100%);
-  border-top: 2px solid rgba(255, 255, 255, 0.15);
+  border-top: 2px solid rgba(255, 255, 255, 0.12);
 }
 
 .zone-no.active {
@@ -70,7 +70,7 @@ body, html, #root {
 }
 
 .zone-title {
-  font-size: clamp(3rem, 12vh, 6.5rem);
+  font-size: clamp(3rem, 11vh, 6.5rem);
   font-weight: 900;
   letter-spacing: 3px;
   line-height: 1;
@@ -78,7 +78,7 @@ body, html, #root {
 }
 
 .zone-sub {
-  font-size: clamp(0.85rem, 2.5vh, 1.25rem);
+  font-size: clamp(0.85rem, 2.3vh, 1.25rem);
   opacity: 0.85;
   font-weight: 600;
   text-transform: uppercase;
@@ -86,11 +86,11 @@ body, html, #root {
 }
 
 .zone-icon {
-  width: clamp(48px, 9vh, 84px);
-  height: clamp(48px, 9vh, 84px);
+  width: clamp(44px, 8.5vh, 80px);
+  height: clamp(44px, 8.5vh, 80px);
 }
 
-/* Barras de progreso de dwell time */
+/* Barra de progreso de fijación */
 .progress-bar-bg {
   position: absolute;
   width: 100%;
@@ -115,29 +115,94 @@ body, html, #root {
   transition: width 0.04s linear;
 }
 
-/* Barra central / Dock para cuidador */
+/* ========================================================
+   FRANJA CENTRAL Y ZONA DE DESCANSO
+   ======================================================== */
 .dock {
   flex-shrink: 0;
-  background-color: #161b22;
+  height: 130px;
+  background-color: #12161f;
   border-top: 1px solid #30363d;
   border-bottom: 1px solid #30363d;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px;
-  gap: 12px;
+  padding: 0 20px;
+  gap: 16px;
   z-index: 10;
+  position: relative;
 }
 
+/* Diana de descanso central */
+.resting-target-container {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.resting-target {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.03);
+  transition: all 0.25s ease;
+}
+
+.resting-inner-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #475569;
+  transition: all 0.25s ease;
+}
+
+.resting-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #8b949e;
+  margin-top: 4px;
+}
+
+/* Estado activo cuando la mirada está descansando en el centro */
+.resting-target-container.is-resting .resting-target {
+  border: 2px solid #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+}
+
+.resting-target-container.is-resting .resting-inner-dot {
+  background: #38bdf8;
+  box-shadow: 0 0 10px #38bdf8;
+  transform: scale(1.25);
+}
+
+.resting-target-container.is-resting .resting-label {
+  color: #38bdf8;
+}
+
+/* Lado izquierdo y derecho */
 .dock-left, .dock-right {
   display: flex;
   align-items: center;
   gap: 12px;
+  z-index: 2;
 }
 
 .preview-wrapper {
-  width: clamp(70px, 12vw, 120px);
-  height: clamp(50px, 8vh, 80px);
+  width: clamp(75px, 11vw, 115px);
+  height: clamp(52px, 8vh, 76px);
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #444c56;
@@ -156,7 +221,7 @@ body, html, #root {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: clamp(0.75rem, 1.8vh, 0.9rem);
+  font-size: clamp(0.75rem, 1.8vh, 0.88rem);
 }
 
 .status-led {
@@ -172,27 +237,25 @@ body, html, #root {
   box-shadow: 0 0 8px #10b981;
 }
 
-/* Control deslizante de sensibilidad */
 .control-slider {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   font-size: 0.75rem;
 }
 
 .control-slider input[type="range"] {
-  width: 100px;
+  width: 110px;
   accent-color: #2563eb;
   cursor: pointer;
 }
 
-/* Botón de calibración */
 .btn-action {
   background: #2563eb;
   color: white;
   border: none;
-  padding: 8px 14px;
-  font-size: clamp(0.75rem, 1.8vh, 0.9rem);
+  padding: 10px 16px;
+  font-size: clamp(0.75rem, 1.8vh, 0.88rem);
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
@@ -200,7 +263,11 @@ body, html, #root {
   align-items: center;
   gap: 6px;
   white-space: nowrap;
-  transition: opacity 0.2s, background 0.2s;
+  transition: background 0.2s;
+}
+
+.btn-action:hover {
+  background: #1d4ed8;
 }
 
 .btn-action:disabled {
@@ -217,32 +284,25 @@ body, html, #root {
   animation: spin 1s linear infinite;
 }
 
-/* ========================================================
-   ADAPTACIÓN RESPONSIVE MOBILE (PANTALLAS CHICAS / VERTICAL)
-   ======================================================== */
+/* Responsive para pantallas estrechas / móvil vertical */
 @media (max-width: 768px) {
   .dock {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 8px 12px;
-    gap: 8px;
+    height: auto;
+    padding: 10px 12px;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
-  .dock-left {
-    justify-content: space-between;
+  .resting-target-container {
+    position: static;
+    transform: none;
+    order: -1;
     width: 100%;
+    margin-bottom: 8px;
   }
 
-  .dock-right {
-    justify-content: space-between;
+  .dock-left, .dock-right {
     width: 100%;
-  }
-
-  .control-slider input[type="range"] {
-    width: 80px;
-  }
-
-  .zone-title {
-    font-size: clamp(2.6rem, 10vh, 4.5rem);
+    justify-content: space-between;
   }
 }

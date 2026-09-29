@@ -1,56 +1,56 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { ChevronUp, ChevronDown, Check, RotateCcw, Eye } from 'lucide-react';
+import { ChevronUp, ChevronDown, RotateCcw } from 'lucide-react';
 
 export default function App() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
-  // Estados del sistema
+  // Estados
   const [faceDetected, setFaceDetected] = useState(false);
   const [currentRatio, setCurrentRatio] = useState(0.40);
-  const [neutralPoint, setNeutralPoint] = useState(null); // Punto neutro del paciente
-  const [activeZone, setActiveZone] = useState(null);     // 'UP' | 'DOWN' | null
+  const [neutralPoint, setNeutralPoint] = useState(null);
+  const [activeZone, setActiveZone] = useState(null); // 'UP' | 'DOWN' | null
   const [progress, setProgress] = useState(0);
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [statusMsg, setStatusMsg] = useState('Esperando rostro...');
 
-  // Sensibilidad mínima accesible (apenas 0.035 de desvío para no fatigar)
+  // Sensibilidad (umbral de desviación respecto al neutro)
   const [sensitivity, setSensitivity] = useState(0.035); 
-  const [dwellTime, setDwellTime] = useState(1000); // 1 segundo fijo
+  const dwellTime = 1000; // 1 segundo sostenido para confirmar
 
-  // Referencias para el bucle de tiempo
+  // Referencias para bucle y temporizador
   const neutralPointRef = useRef(null);
   const activeZoneRef = useRef(null);
   const dwellStartRef = useRef(null);
   const lastTriggerRef = useRef(0);
   const historyRef = useRef([]);
 
-  // Síntesis de voz clara y pausada
+  // Síntesis de voz en español
   const speak = useCallback((text) => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'es-ES';
-      utterance.rate = 0.9;
+      utterance.rate = 0.95;
       window.speechSynthesis.speak(utterance);
     }
   }, []);
 
-  // Cálculo binocular: promedio de ambos ojos
+  // Cálculo binocular promediado
   const calculateRatio = (landmarks) => {
-    // Ojo Izquierdo
+    // Ojo Izquierdo: párpados 159 (arriba) y 145 (abajo), iris 468
     const topL = landmarks[159].y;
     const botL = landmarks[145].y;
     const irisL = landmarks[468].y;
     const hL = botL - topL;
 
-    // Ojo Derecho
+    // Ojo Derecho: párpados 386 (arriba) y 374 (abajo), iris 473
     const topR = landmarks[386].y;
     const botR = landmarks[374].y;
     const irisR = landmarks[473].y;
     const hR = botR - topR;
 
-    // Si pestañea o cierra los ojos por descanso
+    // Ignorar si parpadea o cierra los ojos
     if (hL < 0.007 || hR < 0.007) return null;
 
     const rL = (irisL - topL) / hL;
@@ -59,20 +59,19 @@ export default function App() {
   };
 
   const evaluateGaze = useCallback((rawRatio) => {
-    // Suavizado de 5 lecturas para eliminar temblores involuntarios
+    // Suavizado móvil (últimas 5 lecturas) para estabilizar la señal
     historyRef.current.push(rawRatio);
     if (historyRef.current.length > 5) historyRef.current.shift();
     const ratio = historyRef.current.reduce((a, b) => a + b, 0) / historyRef.current.length;
     
     setCurrentRatio(parseFloat(ratio.toFixed(3)));
 
-    // Si todavía el cuidador no calibró el reposo, no se activa nada
     const neutral = neutralPointRef.current;
     if (neutral === null) return;
 
     const now = performance.now();
 
-    // Pausa protectora de 2 segundos tras emitir una respuesta para no cansar
+    // Pausa protectora de 2 segundos tras hablar
     if (now - lastTriggerRef.current < 2000) {
       resetSelection();
       return;
@@ -80,15 +79,16 @@ export default function App() {
 
     let detected = null;
 
-    // Arriba (SÍ): el iris sube (el valor disminuye respecto al centro)
+    // REGLA FÍSICA REAL:
+    // Al mirar ARRIBA: el iris sube acercándose al párpado superior -> ratio disminuye
     if (ratio < neutral - sensitivity) {
-      detected = 'DOWN';
-    } 
-    // Abajo (NO): el iris baja (el valor sube respecto al centro)
-    else if (ratio > neutral + sensitivity) {
       detected = 'UP';
     } 
-    // Zona de descanso neutra: no hace nada
+    // Al mirar ABAJO: el iris baja alejándose del párpado superior -> ratio aumenta
+    else if (ratio > neutral + sensitivity) {
+      detected = 'DOWN';
+    } 
+    // ZONA DE DESCANSO (CENTRO)
     else {
       detected = null;
     }
@@ -121,7 +121,6 @@ export default function App() {
     setProgress(0);
   };
 
-  // Inicialización de MediaPipe
   useEffect(() => {
     const FaceMeshClass = window.FaceMesh;
     const CameraClass = window.Camera;
@@ -150,7 +149,7 @@ export default function App() {
         setFaceDetected(true);
         const lm = results.multiFaceLandmarks[0];
 
-        // Puntos cian en los iris para que el cuidador vea si la cámara enfoca bien
+        // Dibujar los puntos del iris en celeste
         [468, 473].forEach((idx) => {
           const pt = lm[idx];
           ctx.beginPath();
@@ -192,10 +191,10 @@ export default function App() {
     };
   }, [evaluateGaze]);
 
-  // Calibración pasiva: toma el promedio de reposo en 2 segundos
+  // Calibración pasiva asistida (2 segundos mirando al centro)
   const handleCalibrate = () => {
     setIsCalibrating(true);
-    setStatusMsg('Registrando posición de reposo...');
+    setStatusMsg('Registrando centro...');
     const samples = [];
 
     const interval = setInterval(() => {
@@ -209,17 +208,16 @@ export default function App() {
         const finalVal = parseFloat(avg.toFixed(3));
         neutralPointRef.current = finalVal;
         setNeutralPoint(finalVal);
-        setStatusMsg('✓ Calibrado con éxito');
+        setStatusMsg('✓ Calibrado');
       } else {
-        setStatusMsg('Error: mantenga la cara frente a la cámara');
+        setStatusMsg('Error de detección');
       }
       setIsCalibrating(false);
     }, 1800);
   };
 
-  // Cálculo visual de la desviación actual frente al centro
-  const delta = neutralPoint !== null ? currentRatio - neutralPoint : 0;
-  // delta negativo = mirando arriba; delta positivo = mirando abajo
+  // ¿El paciente está mirando a la zona de descanso?
+  const isResting = faceDetected && neutralPoint !== null && activeZone === null;
 
   return (
     <div className="app-container">
@@ -243,55 +241,44 @@ export default function App() {
         </div>
       </div>
 
-      {/* Panel Central Asistivo */}
-      <div className="dock" style={{ height: '125px', padding: '0 20px' }}>
-        <div className="dock-left" style={{ gap: '15px' }}>
+      {/* Barra Central con Diana de Descanso */}
+      <div className="dock">
+        
+        {/* Izquierda: Vista previa de cámara y datos técnicos */}
+        <div className="dock-left">
           <div className="preview-wrapper">
             <canvas ref={canvasRef} className="preview-canvas" width="160" height="110" />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className={`status-led ${faceDetected && neutralPoint !== null ? 'ready' : ''}`} />
-              <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{statusMsg}</span>
+          <div className="status-badge">
+            <span className={`status-led ${faceDetected && neutralPoint !== null ? 'ready' : ''}`} />
+            <div>
+              <div style={{ fontWeight: 600 }}>{statusMsg}</div>
+              <small style={{ opacity: 0.85, fontFamily: 'monospace' }}>
+                Ojo: <b>{currentRatio}</b> | Base: <b>{neutralPoint ?? '--'}</b>
+              </small>
             </div>
-
-            {/* Medidor visual de desviación para el cuidador */}
-            {neutralPoint !== null ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', background: '#21262d', padding: '4px 10px', borderRadius: '6px' }}>
-                <span>Arriba</span>
-                <div style={{ width: '90px', height: '8px', background: '#30363d', borderRadius: '4px', position: 'relative' }}>
-                  {/* Punto central */}
-                  <div style={{ position: 'absolute', left: '50%', top: '-2px', width: '2px', height: '12px', background: '#8b949e' }} />
-                  {/* Indicador de posición en tiempo real */}
-                  <div style={{
-                    position: 'absolute',
-                    top: '-3px',
-                    left: `${Math.min(Math.max(50 + (delta / 0.1) * 50, 0), 100)}%`,
-                    width: '14px',
-                    height: '14px',
-                    borderRadius: '50%',
-                    background: Math.abs(delta) > sensitivity ? '#10b981' : '#58a6ff',
-                    transform: 'translateX(-50%)',
-                    transition: 'left 0.05s linear'
-                  }} />
-                </div>
-                <span>Abajo</span>
-              </div>
-            ) : (
-              <small style={{ color: '#f59e0b' }}>⚠️ Presione "Guardar Reposo" para empezar</small>
-            )}
           </div>
         </div>
 
-        {/* Controles para el acompañante / cuidador */}
-        <div className="dock-right" style={{ gap: '20px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.8rem' }}>
-            <span>Esfuerzo necesario: {sensitivity === 0.025 ? 'Muy leve' : sensitivity === 0.035 ? 'Normal' : 'Pronunciado'}</span>
+        {/* CENTRO: DIANA VISUAL DE DESCANSO */}
+        <div className={`resting-target-container ${isResting ? 'is-resting' : ''}`}>
+          <div className="resting-target">
+            <div className="resting-inner-dot" />
+          </div>
+          <span className="resting-label">
+            {isResting ? 'Descansando' : 'Centro'}
+          </span>
+        </div>
+
+        {/* Derecha: Controles para el acompañante */}
+        <div className="dock-right">
+          <div className="control-slider">
+            <span>Esfuerzo: {sensitivity === 0.025 ? 'Leve' : sensitivity === 0.035 ? 'Medio' : 'Alto'}</span>
             <input 
               type="range" 
               min="0.020" 
-              max="0.060" 
+              max="0.055" 
               step="0.005"
               value={sensitivity} 
               onChange={(e) => setSensitivity(parseFloat(e.target.value))} 
@@ -300,14 +287,15 @@ export default function App() {
 
           <button 
             className="btn-action" 
-            style={{ padding: '12px 20px', fontSize: '1rem', background: neutralPoint ? '#238636' : '#2563eb' }}
+            style={{ background: neutralPoint ? '#238636' : '#2563eb' }}
             onClick={handleCalibrate}
             disabled={isCalibrating || !faceDetected}
           >
-            <RotateCcw size={18} className={isCalibrating ? 'spin' : ''} />
-            {isCalibrating ? 'Guardando reposo...' : 'Guardar Reposo del Paciente'}
+            <RotateCcw size={16} className={isCalibrating ? 'spin' : ''} />
+            {isCalibrating ? 'Guardando...' : 'Calibrar Centro'}
           </button>
         </div>
+
       </div>
 
       {/* Zona Inferior: NO */}
